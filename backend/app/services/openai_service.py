@@ -25,7 +25,7 @@ class OpenAIService:
 """
         
         try:
-            response = await self.client.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": "あなたは経験豊富な占い師です。スピリチュアルな言葉を使いながら、ポジティブで具体的なアドバイスを提供してください。"},
@@ -60,7 +60,7 @@ class OpenAIService:
 """
         
         try:
-            response = await self.client.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": "あなたは経験豊富な占い師です。スピリチュアルな言葉を使いながら、ポジティブで具体的なアドバイスを提供してください。"},

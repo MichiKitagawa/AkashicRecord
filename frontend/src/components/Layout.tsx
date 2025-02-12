@@ -1,4 +1,4 @@
-import { Box, Container, Flex, Heading, Link as ChakraLink } from '@chakra-ui/react';
+import { Box, Container, Flex, Heading } from '@chakra-ui/react';
 import Link from 'next/link';
 
 interface LayoutProps {
@@ -12,10 +12,10 @@ export const Layout = ({ children }: LayoutProps) => {
       <Box bg="purple.600" color="white" py={4} mb={8}>
         <Container maxW="container.xl">
           <Flex justify="space-between" align="center">
-            <Link href="/" passHref>
-              <ChakraLink _hover={{ textDecoration: 'none' }}>
-                <Heading size="lg">アカシックAI占い</Heading>
-              </ChakraLink>
+            <Link href="/" style={{ textDecoration: 'none' }}>
+              <Heading size="lg" cursor="pointer" _hover={{ opacity: 0.8 }}>
+                アカシックAI占い
+              </Heading>
             </Link>
           </Flex>
         </Container>

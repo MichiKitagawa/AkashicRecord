@@ -21,7 +21,7 @@ async def create_free_diagnosis(request: FreeDiagnosisRequest):
             birth_date=str(request.birth_date)
         )
         
-        # レスポンスを生成
+        # レスポンスを生成(FreeDiagnosisResponseのインスタンスを作成)
         return FreeDiagnosisResponse(result=result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
