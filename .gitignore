@@ -51,3 +51,6 @@ yarn-error.log*
 
 # Local Netlify folder
 .netlify
+
+# Firebase 認証キー（必ず無視する）
+firebase-key.json

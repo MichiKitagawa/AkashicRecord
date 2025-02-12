@@ -1,28 +1,30 @@
-import os
-from dotenv import load_dotenv
+# /app/core/config.py
 from pydantic_settings import BaseSettings
-
-# .envファイルの読み込み
-load_dotenv()
+from pydantic import ConfigDict, Field  # ConfigDict を pydantic から、Field も同様に
 
 class Settings(BaseSettings):
     # アプリケーション設定
     APP_NAME: str = "Akashic AI Divination API"
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    ENVIRONMENT: str = "development"
+    FRONTEND_URL: str = "http://localhost:3000"
     
     # OpenAI API設定
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_API_KEY: str
     
     # Stripe API設定
-    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
-    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
     
     # データベース設定
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    DATABASE_URL: str
+    
+    # Firebase設定（必須項目として定義）
+    GOOGLE_APPLICATION_CREDENTIALS: str = Field(..., env="GOOGLE_APPLICATION_CREDENTIALS")
 
-    class Config:
-        case_sensitive = True
+    model_config: ConfigDict = {
+         "env_file": ".env",           # .env ファイルから環境変数を読み込む
+         "extra": "allow",             # 未定義の環境変数も許容する
+         "case_sensitive": True,       # 大文字小文字を区別する
+    }
 
-# グローバル設定インスタンス
 settings = Settings()

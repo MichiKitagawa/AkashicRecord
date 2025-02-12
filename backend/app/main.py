@@ -12,14 +12,14 @@ app = FastAPI(
 # CORS設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL],
+    allow_origins=["http://localhost:3000"],  # フロントエンドのURL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ルーターの登録
-app.include_router(diagnosis.router, prefix="/api/diagnosis", tags=["diagnosis"])
+app.include_router(diagnosis.router, prefix="/api")
 
 @app.get("/")
 async def root():
