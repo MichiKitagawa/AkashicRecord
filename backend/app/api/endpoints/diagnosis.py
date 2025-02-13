@@ -37,7 +37,7 @@ async def create_free_diagnosis(
     db: AsyncSession = Depends(get_db)
 ):
     try:
-        logger.debug(f"Received request: {request}")  # デバッグログ
+        logger.debug(f"Received request: {request}")
         result = await generate_diagnosis(request.name, request.birth_date)
         # データベースに保存
         diagnosis = await create_diagnosis(
@@ -48,7 +48,7 @@ async def create_free_diagnosis(
         )
         return {"result": result}
     except Exception as e:
-        logger.error(f"Error in free diagnosis: {str(e)}")
+        logger.error(f"Error in diagnosis: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.exception_handler(Exception)

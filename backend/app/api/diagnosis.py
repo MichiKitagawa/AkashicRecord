@@ -10,39 +10,60 @@ from ..errors import DiagnosisError, OpenAIError
 from ..services.pdf_service import pdf_service
 from fastapi.responses import Response
 from ..services.diagnosis_store import diagnosis_store
+import logging
+
+# ロガーの設定
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.post("/diagnosis/free", response_model=FreeDiagnosisResponse)
+@router.post("/free", response_model=FreeDiagnosisResponse)
 async def create_free_diagnosis(request: FreeDiagnosisRequest):
     """
     無料診断を実行し、結果を返却する
     """
     try:
+        logger.debug(f"Received free diagnosis request for {request.name}")
+        
         # OpenAI APIを使用して診断結果を生成
-        result = await openai_service.generate_free_diagnosis(
-            name=request.name,
-            birth_date=str(request.birth_date)
-        )
+        try:
+            result = await openai_service.generate_free_diagnosis(
+                name=request.name,
+                birth_date=str(request.birth_date)
+            )
+            logger.debug("Successfully generated diagnosis result from OpenAI")
+        except OpenAIError as e:
+            logger.error(f"OpenAI API error: {str(e)}", exc_info=True)
+            raise
         
         # 診断結果を保存
-        diagnosis_token = await diagnosis_store.create_diagnosis(
-            name=request.name,
-            birth_date=str(request.birth_date),
-            result=result,
-            is_detailed=False
-        )
+        try:
+            diagnosis_token = await diagnosis_store.create_diagnosis(
+                name=request.name,
+                birth_date=str(request.birth_date),
+                result=result,
+                is_detailed=False
+            )
+            logger.debug(f"Successfully saved diagnosis with token: {diagnosis_token}")
+        except DiagnosisError as e:
+            logger.error(f"Failed to save diagnosis: {str(e)}", exc_info=True)
+            raise
         
         return FreeDiagnosisResponse(
             diagnosis_token=diagnosis_token,
             result=result
         )
     except OpenAIError as e:
+        logger.error(f"OpenAI error in create_free_diagnosis: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except DiagnosisError as e:
+        logger.error(f"Diagnosis error in create_free_diagnosis: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        logger.error(f"Unexpected error in create_free_diagnosis: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.post("/diagnosis/detail", response_model=DetailedDiagnosisResponse)
+@router.post("/detail", response_model=DetailedDiagnosisResponse)
 async def create_detailed_diagnosis(request: DetailedDiagnosisRequest):
     """
     有料診断を実行し、モザイク処理された結果を返却する

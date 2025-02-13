@@ -1,7 +1,15 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api import diagnosis
+from .api import diagnosis, payment
 from .core.config import settings
+
+# ログ設定
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Akashic AI Divination API",
@@ -19,7 +27,8 @@ app.add_middleware(
 )
 
 # ルーターの登録
-app.include_router(diagnosis.router, prefix="/api")
+app.include_router(diagnosis.router, prefix="/api/diagnosis")
+app.include_router(payment.router, prefix="/api/payment")
 
 @app.get("/")
 async def root():
