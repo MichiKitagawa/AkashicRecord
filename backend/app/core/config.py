@@ -1,6 +1,6 @@
 # /app/core/config.py
 from pydantic_settings import BaseSettings
-from pydantic import ConfigDict, Field  # ConfigDict を pydantic から、Field も同様に
+from pydantic import ConfigDict, Field, PostgresDsn  # ConfigDict を pydantic から、Field も同様に
 
 class Settings(BaseSettings):
     # アプリケーション設定
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str = ""
     
     # データベース設定
-    DATABASE_URL: str
+    DATABASE_URL: PostgresDsn
     
     # Firebase設定（必須項目として定義）
     GOOGLE_APPLICATION_CREDENTIALS: str = Field(..., env="GOOGLE_APPLICATION_CREDENTIALS")

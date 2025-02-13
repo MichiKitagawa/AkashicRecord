@@ -1,6 +1,9 @@
 from openai import OpenAI
 from ..errors import OpenAIError
 from ..config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -13,15 +16,23 @@ class OpenAIService:
         無料診断の結果を生成する
         """
         try:
-            response = await client.chat.completions.create(
+            logger.debug(f"Calling OpenAI API for {name}")  # デバッグログ
+            completion = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "あなたは占い師です。"},
                     {"role": "user", "content": f"名前: {name}\n生年月日: {birth_date}\nこの情報から運勢を占ってください。"}
                 ]
             )
-            return response.choices[0].message.content
+            logger.debug("OpenAI API call successful")  # デバッグログ
+            
+            # 応答の取得
+            result = completion.choices[0].message.content
+            logger.debug(f"Generated result: {result}")
+            
+            return result
         except Exception as e:
+            logger.error(f"OpenAI API error: {str(e)}", exc_info=True)  # スタックトレースを含むエラーログ
             raise OpenAIError(str(e))
 
     async def generate_detailed_diagnosis(
