@@ -8,6 +8,31 @@ export default function DiagnosisCompletePage() {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [diagnosis, setDiagnosis] = useState<{ result: string } | null>(null);
+
+  useEffect(() => {
+    const fetchDiagnosis = async () => {
+      const token = searchParams.get('token');
+      if (!token) {
+        setError('診断情報が見つかりません');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/diagnosis/${token}`);
+        if (!response.ok) {
+          throw new Error('診断結果の取得に失敗しました');
+        }
+        const data = await response.json();
+        setDiagnosis(data);
+      } catch (err) {
+        setError('診断結果の取得に失敗しました。もう一度お試しください。');
+        console.error(err);
+      }
+    };
+
+    fetchDiagnosis();
+  }, [searchParams]);
 
   const handleDownloadPDF = async () => {
     const token = searchParams.get('token');
@@ -44,9 +69,13 @@ export default function DiagnosisCompletePage() {
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mb-8">
           <h2 className="text-xl font-semibold mb-4">ご購入ありがとうございます</h2>
-          <p className="mb-4">
-            詳細な診断結果をご確認いただけます。また、PDFとしてダウンロードすることも可能です。
-          </p>
+          
+          {diagnosis && (
+            <div className="mb-8 whitespace-pre-wrap">
+              <h3 className="text-lg font-semibold mb-2">診断結果</h3>
+              <p className="text-gray-700 dark:text-gray-300">{diagnosis.result}</p>
+            </div>
+          )}
 
           <div className="space-y-4">
             <button

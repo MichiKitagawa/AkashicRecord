@@ -125,3 +125,24 @@ async def download_diagnosis_pdf(token: str):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{token}")
+async def get_diagnosis(token: str):
+    """
+    診断結果を取得する
+    """
+    try:
+        diagnosis = await diagnosis_store.get_diagnosis(token)
+        if not diagnosis.get('is_unlocked') and diagnosis.get('is_detailed'):
+            raise HTTPException(status_code=403, detail="診断結果がロックされています")
+            
+        return {
+            "result": diagnosis['result'],
+            "name": diagnosis['name'],
+            "birth_date": diagnosis['birth_date'],
+            "is_detailed": diagnosis.get('is_detailed', False),
+            "categories": diagnosis.get('categories', []),
+            "free_text": diagnosis.get('free_text', "")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Header, Request
-from ..services.stripe_service import stripe_service
+from fastapi import APIRouter, Header, Request, HTTPException
+from ..services.square_service import square_service
 from ..schemas.payment import CreateCheckoutSessionRequest, CreateCheckoutSessionResponse
 import logging
+import json
+from ..config import settings
 
 # ロガーの設定
 logger = logging.getLogger(__name__)
@@ -11,29 +13,38 @@ router = APIRouter()
 @router.post("/create-checkout-session", response_model=CreateCheckoutSessionResponse)
 async def create_checkout_session(request: CreateCheckoutSessionRequest):
     """
-    Stripe Checkoutセッションを作成する
+    Square決済リンクを作成する
     """
-    logger.debug(f"チェックアウトセッション作成リクエスト: {request.diagnosis_token}")
-    checkout_url = await stripe_service.create_checkout_session(request.diagnosis_token)
-    logger.debug(f"チェックアウトURL生成完了: {checkout_url}")
+    logger.debug(f"決済リンク作成リクエスト: {request.diagnosis_token}")
+    checkout_url = await square_service.create_payment_link(request.diagnosis_token)
+    logger.debug(f"決済リンク生成完了: {checkout_url}")
     return CreateCheckoutSessionResponse(checkout_url=checkout_url)
 
 @router.post("/webhook")
-async def stripe_webhook(request: Request, stripe_signature: str = Header(None)):
+async def square_webhook(request: Request, signature: str = Header(None, alias="Square-Signature")):
     """
-    Stripeからのwebhookを処理する
+    Squareからのwebhookを処理する
     """
     try:
         logger.debug("Webhook受信開始")
-        logger.debug(f"Stripe-Signature: {stripe_signature}")
+        logger.debug(f"Square-Signature: {signature}")
         
-        payload = await request.body()
-        logger.debug(f"受信したペイロード: {payload.decode()}")
+        payload = await request.json()
+        logger.debug(f"受信したペイロード: {json.dumps(payload)}")
+
+        # テスト環境の場合は署名検証をスキップ
+        if settings.ENVIRONMENT == "development":
+            # テストイベントの処理
+            return {"status": "success"}
+            
+        # 本番環境の場合は署名検証を実行
+        if not square_service.verify_signature(signature, json.dumps(payload)):
+            raise HTTPException(status_code=401, detail="Invalid signature")
         
-        await stripe_service.handle_webhook(payload, stripe_signature)
+        await square_service.handle_webhook(payload)
         logger.debug("Webhook処理完了")
         
         return {"status": "success"}
     except Exception as e:
-        logger.error(f"Webhook処理エラー: {str(e)}", exc_info=True)
-        raise 
+        logger.error(f"Webhook処理エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e)) 
