@@ -10,6 +10,7 @@ from ..errors import DiagnosisError, OpenAIError
 from ..services.pdf_service import pdf_service
 from fastapi.responses import Response
 from ..services.diagnosis_store import diagnosis_store
+from ..core.config import settings
 import logging
 
 # ロガーの設定
@@ -132,17 +133,41 @@ async def get_diagnosis(token: str):
     診断結果を取得する
     """
     try:
+        logger.debug(f"診断結果の取得リクエストを受信。token: {token}")
+        
         diagnosis = await diagnosis_store.get_diagnosis(token)
-        if not diagnosis.get('is_unlocked') and diagnosis.get('is_detailed'):
+        if not diagnosis:
+            logger.error(f"診断結果が見つかりません。token: {token}")
+            raise HTTPException(status_code=404, detail="診断結果が見つかりません")
+            
+        # 詳細な診断結果の場合のみロック状態をチェック
+        is_detailed = diagnosis.get('is_detailed', False)
+        is_unlocked = diagnosis.get('is_unlocked', not is_detailed)  # 詳細診断でない場合はデフォルトでアンロック
+        
+        logger.debug(f"診断結果の状態確認 - is_detailed: {is_detailed}, is_unlocked: {is_unlocked}")
+        
+        if is_detailed and not is_unlocked:
+            logger.error(f"診断結果がロックされています。token: {token}")
             raise HTTPException(status_code=403, detail="診断結果がロックされています")
             
-        return {
+        response_data = {
             "result": diagnosis['result'],
             "name": diagnosis['name'],
             "birth_date": diagnosis['birth_date'],
-            "is_detailed": diagnosis.get('is_detailed', False),
+            "is_detailed": is_detailed,
+            "is_unlocked": is_unlocked,
             "categories": diagnosis.get('categories', []),
             "free_text": diagnosis.get('free_text', "")
         }
+        
+        logger.debug(f"診断結果を返却します。token: {token}")
+        return response_data
+        
+    except DiagnosisError as e:
+        logger.error(f"診断結果の取得に失敗: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"予期せぬエラーが発生: {str(e)}")
+        raise HTTPException(status_code=500, detail="内部サーバーエラー")

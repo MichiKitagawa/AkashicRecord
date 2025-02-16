@@ -32,9 +32,10 @@ async def square_webhook(request: Request, signature: str = Header(None, alias="
         payload = await request.json()
         logger.debug(f"受信したペイロード: {json.dumps(payload)}")
 
-        # テスト環境の場合は署名検証をスキップ
+        # 開発環境の場合でも、webhookの処理を実行
         if settings.ENVIRONMENT == "development":
-            # テストイベントの処理
+            logger.debug("開発環境でのWebhook処理を開始")
+            await square_service.handle_webhook(payload)
             return {"status": "success"}
             
         # 本番環境の場合は署名検証を実行
