@@ -75,25 +75,110 @@ class DiagnosisStore:
         """
         診断結果を取得する
         """
+        if not token:
+            logger.error("診断トークンが指定されていません")
+            raise DiagnosisError("診断トークンが指定されていません")
+
         try:
-            doc = self.collection.document(token).get()
+            logger.debug(f"診断結果の取得を開始します。token: {token}")
+            
+            # ドキュメントの参照を取得
+            doc_ref = self.collection.document(token)
+            
+            # 非同期でFirebaseの操作を実行
+            doc = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: doc_ref.get()
+            )
+            
             if not doc.exists:
+                logger.error(f"診断結果が見つかりません。token: {token}")
                 raise DiagnosisError("指定された診断結果が見つかりません")
-            return doc.to_dict()
+            
+            result = doc.to_dict()
+            if not result:
+                logger.error(f"診断結果のデータが不正です。token: {token}")
+                raise DiagnosisError("診断結果のデータが不正です")
+                
+            logger.debug(f"診断結果を取得しました。token: {token}")
+            return result
+            
+        except google_exceptions.PermissionDenied as e:
+            logger.error(f"Firestore APIへのアクセス権限がありません: {str(e)}")
+            raise DiagnosisError("データベースへのアクセス権限がありません。管理者に連絡してください。")
+            
+        except google_exceptions.NotFound as e:
+            logger.error(f"Firestoreのドキュメントが見つかりません: {str(e)}")
+            raise DiagnosisError("指定された診断結果が見つかりません")
+            
+        except asyncio.CancelledError:
+            logger.error(f"診断結果の取得がキャンセルされました。token: {token}")
+            raise DiagnosisError("診断結果の取得がキャンセルされました")
+            
         except Exception as e:
+            logger.error(f"診断結果の取得中に予期せぬエラーが発生しました: {str(e)}")
             raise DiagnosisError(f"診断結果の取得に失敗しました: {str(e)}")
 
     async def unlock_diagnosis(self, token: str) -> None:
         """
         診断結果のロックを解除する
         """
+        if not token:
+            logger.error("診断トークンが指定されていません")
+            raise DiagnosisError("診断トークンが指定されていません")
+
         try:
+            logger.debug(f"診断結果のロック解除を開始します。token: {token}")
+            
+            # ドキュメントの参照を取得
             doc_ref = self.collection.document(token)
-            doc_ref.update({
-                'is_unlocked': True,
-                'updated_at': datetime.utcnow()
-            })
+            
+            # ドキュメントの存在確認
+            doc = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: doc_ref.get()
+            )
+            
+            if not doc.exists:
+                logger.error(f"診断結果が見つかりません。token: {token}")
+                raise DiagnosisError("指定された診断結果が見つかりません")
+                
+            # 現在のデータを取得
+            current_data = doc.to_dict()
+            if not current_data:
+                logger.error(f"診断結果のデータが不正です。token: {token}")
+                raise DiagnosisError("診断結果のデータが不正です")
+                
+            # すでにロック解除されている場合は早期リターン
+            if current_data.get('is_unlocked'):
+                logger.debug(f"診断結果はすでにロック解除されています。token: {token}")
+                return
+                
+            # ロック解除を実行
+            await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: doc_ref.update({
+                    'is_unlocked': True,
+                    'updated_at': datetime.utcnow()
+                })
+            )
+            
+            logger.debug(f"診断結果のロック解除が完了しました。token: {token}")
+            
+        except google_exceptions.PermissionDenied as e:
+            logger.error(f"Firestore APIへのアクセス権限がありません: {str(e)}")
+            raise DiagnosisError("データベースへのアクセス権限がありません。管理者に連絡してください。")
+            
+        except google_exceptions.NotFound as e:
+            logger.error(f"Firestoreのドキュメントが見つかりません: {str(e)}")
+            raise DiagnosisError("指定された診断結果が見つかりません")
+            
+        except asyncio.CancelledError:
+            logger.error(f"診断結果のロック解除がキャンセルされました。token: {token}")
+            raise DiagnosisError("診断結果のロック解除がキャンセルされました")
+            
         except Exception as e:
+            logger.error(f"診断結果のロック解除中に予期せぬエラーが発生しました: {str(e)}")
             raise DiagnosisError(f"診断結果のロック解除に失敗しました: {str(e)}")
 
 diagnosis_store = DiagnosisStore() 
